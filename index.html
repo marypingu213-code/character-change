@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>圓朱文標誌產生器 - 復古印鑑風格</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- React & Babel CDN -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&family=Noto+Serif+TC:wght@400;700;900&display=swap');
+        
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+        }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #e5e5e5; border-radius: 20px; }
+        
+        input[type=range] {
+            accent-color: #ea1e63;
+        }
+    </style>
+</head>
+<body class="bg-neutral-100">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useRef, useEffect } = React;
+
+        function App() {
+            // 基本設定
+            const [text, setText] = useState('信用');
+            const [direction, setDirection] = useState('rtl');
+            const [color, setColor] = useState('#ea1e63');
+            const [backgroundColor, setBackgroundColor] = useState('transparent');
+            const [fontFamily, setFontFamily] = useState('sans');
+            
+            // 變形設定
+            const [fontSize, setFontSize] = useState(400);
+            const [scaleX, setScaleX] = useState(0.85);
+            const [scaleY, setScaleY] = useState(1.4);
+            const [gapX, setGapX] = useState(115);
+            const [gapY, setGapY] = useState(120);
+            const [borderWidth, setBorderWidth] = useState(0);
+
+            const svgRef = useRef(null);
+
+            const PRESETS = [
+                { name: '經典圓朱文', text: '信用', color: '#ea1e63', font: 'sans', size: 400, sX: 0.85, sY: 1.4, gX: 115, dir: 'rtl', border: 0 },
+                { name: '傳統朱文印', text: '王記', color: '#dc2626', font: 'serif', size: 420, sX: 0.9, sY: 1.5, gX: 120, dir: 'rtl', border: 8 },
+                { name: '四字滿版', text: '公平誠實', color: '#0b6623', font: 'sans', size: 280, sX: 1.1, sY: 1.1, gX: 120, gY: 120, dir: 'rtl', border: 0 },
+                { name: '單字極簡', text: '南', color: '#1e3a8a', font: 'sans', size: 550, sX: 1.2, sY: 1.2, gX: 0, dir: 'ltr', border: 0 },
+            ];
+
+            const applyPreset = (p) => {
+                setText(p.text); setColor(p.color); setFontFamily(p.font);
+                setFontSize(p.size); setScaleX(p.sX); setScaleY(p.sY);
+                setGapX(p.gX); setDirection(p.dir); setBorderWidth(p.border);
+                if(p.gY) setGapY(p.gY);
+            };
+
+            const handleDownload = () => {
+                const svg = svgRef.current;
+                const svgData = new XMLSerializer().serializeToString(svg);
+                const canvas = document.createElement("canvas");
+                const ctx = canvas.getContext("2d");
+                canvas.width = 1000;
+                canvas.height = 1000;
+                
+                const img = new Image();
+                img.onload = () => {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    if (backgroundColor !== 'transparent') {
+                        ctx.fillStyle = backgroundColor;
+                        ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    }
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    const link = document.createElement("a");
+                    link.download = `${text}_logo.png`;
+                    link.href = canvas.toDataURL("image/png");
+                    link.click();
+                };
+                img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svgData)));
+            };
+
+            const renderChars = () => {
+                const chars = Array.from(text.substring(0, 4));
+                const cx = 250, cy = 250;
+                let positions = [];
+
+                if (chars.length === 1) positions = [{ x: cx, y: cy }];
+                else if (chars.length === 2) {
+                    positions = direction === 'rtl' ? [{ x: cx + gapX, y: cy }, { x: cx - gapX, y: cy }] : [{ x: cx - gapX, y: cy }, { x: cx + gapX, y: cy }];
+                } else {
+                    positions = direction === 'rtl' ? 
+                        [{ x: cx + gapX, y: cy - gapY }, { x: cx - gapX, y: cy - gapY }, { x: cx + gapX, y: cy + gapY }, { x: cx - gapX, y: cy + gapY }] :
+                        [{ x: cx - gapX, y: cy - gapY }, { x: cx + gapX, y: cy - gapY }, { x: cx - gapX, y: cy + gapY }, { x: cx + gapX, y: cy + gapY }];
+                }
+
+                return chars.map((char, i) => (
+                    <g key={i} transform={`translate(${positions[i]?.x}, ${positions[i]?.y}) scale(${scaleX}, ${scaleY})`}>
+                        <text x="0" y="0" textAnchor="middle" dominantBaseline="central" fontSize={fontSize} fontWeight="900" 
+                              fill={color} style={{fontFamily: fontFamily === 'serif' ? 'Noto Serif TC' : 'Noto Sans TC'}}>
+                            {char}
+                        </text>
+                    </g>
+                ));
+            };
+
+            return (
+                <div className="min-h-screen p-4 md:p-8 flex flex-col md:flex-row gap-8 max-w-7xl mx-auto">
+                    {/* 預覽區 */}
+                    <div className="flex-1 flex flex-col items-center justify-center bg-white rounded-3xl shadow-sm border border-neutral-200 p-8 relative">
+                        <div className="w-full max-w-[450px] aspect-square relative" style={{ 
+                            backgroundImage: 'conic-gradient(#eee 25%, transparent 25%, transparent 50%, #eee 50%, #eee 75%, transparent 75%, transparent)',
+                            backgroundSize: '20px 20px', borderRadius: '50%' 
+                        }}>
+                            <svg ref={svgRef} viewBox="0 0 500 500" width="100%" height="100%">
+                                <defs><clipPath id="c"><circle cx="250" cy="250" r="240" /></clipPath></defs>
+                                {backgroundColor !== 'transparent' && <circle cx="250" cy="250" r="240" fill={backgroundColor} />}
+                                <g clipPath="url(#c)">{renderChars()}</g>
+                                {borderWidth > 0 && <circle cx="250" cy="250" r={240 - borderWidth/2} fill="none" stroke={color} strokeWidth={borderWidth} />}
+                            </svg>
+                        </div>
+                        <p className="mt-6 text-neutral-400 text-sm">此預覽展示了「圓朱文」裁切效果</p>
+                    </div>
+
+                    {/* 控制區 */}
+                    <div className="w-full md:w-[400px] bg-white rounded-3xl shadow-sm border border-neutral-200 p-6 overflow-y-auto custom-scrollbar h-fit">
+                        <h1 className="text-2xl font-bold mb-1">圓朱文標誌產生器</h1>
+                        <p className="text-sm text-neutral-500 mb-6">自訂你的復古字體藝術</p>
+
+                        <div className="space-y-6">
+                            <div className="grid grid-cols-2 gap-2">
+                                {PRESETS.map((p, i) => (
+                                    <button key={i} onClick={() => applyPreset(p)} className="text-xs p-2 border rounded-lg hover:bg-neutral-50 flex items-center gap-2">
+                                        <div className="w-3 h-3 rounded-full" style={{background: p.color}}></div> {p.name}
+                                    </button>
+                                ))}
+                            </div>
+
+                            <div className="space-y-3">
+                                <label className="block text-xs font-bold text-neutral-500 uppercase">內容設定</label>
+                                <input type="text" value={text} onChange={e => setText(e.target.value)} maxLength="4" className="w-full p-2 border rounded-lg text-center font-bold text-xl" />
+                                <div className="flex gap-2">
+                                    <select value={direction} onChange={e => setDirection(e.target.value)} className="flex-1 p-2 border rounded-lg text-sm bg-white">
+                                        <option value="rtl">右至左</option><option value="ltr">左至右</option>
+                                    </select>
+                                    <input type="color" value={color} onChange={e => setColor(e.target.value)} className="w-12 h-10 p-1 border rounded-lg" />
+                                </div>
+                            </div>
+
+                            <div className="space-y-4">
+                                <label className="block text-xs font-bold text-neutral-500 uppercase">拉伸與間距</label>
+                                <div>
+                                    <div className="flex justify-between text-xs mb-1"><span>字體大小</span><span>{fontSize}</span></div>
+                                    <input type="range" min="100" max="800" value={fontSize} onChange={e => setFontSize(parseInt(e.target.value))} className="w-full" />
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <div className="flex justify-between text-xs mb-1"><span>寬度拉伸</span></div>
+                                        <input type="range" min="0.5" max="2" step="0.05" value={scaleX} onChange={e => setScaleX(parseFloat(e.target.value))} className="w-full" />
+                                    </div>
+                                    <div>
+                                        <div className="flex justify-between text-xs mb-1"><span>高度拉伸</span></div>
+                                        <input type="range" min="0.5" max="2" step="0.05" value={scaleY} onChange={e => setScaleY(parseFloat(e.target.value))} className="w-full" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button onClick={handleDownload} className="w-full py-3 bg-pink-600 text-white rounded-xl font-bold shadow-lg hover:bg-pink-700 transition-colors">下載 PNG 標誌</button>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
